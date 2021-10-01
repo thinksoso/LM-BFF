@@ -356,7 +356,7 @@ where `--n_models` specify how many models you want to use for ensemble (should 
 
 ### Zero-shot experiments
 
-It's easy to run zero-shot experiments: just add the `--no_train` argument:
+It's so easy to run zero-shot experiments: just add the `--no_train` argument:
 
 ```bash
 TAG=zero-shot TYPE=prompt TASK=SST-2 BS=2 LR=1e-5 SEED=42 MODEL=roberta-large bash run_experiment.sh "--no_train"
