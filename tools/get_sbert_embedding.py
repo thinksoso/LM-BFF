@@ -35,6 +35,8 @@ def get_sentence(task, line):
             return line[-3] + ' ' + line[-2]
         elif task == 'WNLI':
             return line[1] + ' ' + line[2]
+        elif task == 'MED_NLI':
+            return line[0] + ' ' + line[1] 
         else:
             raise NotImplementedError
 
@@ -61,6 +63,11 @@ def load_datasets(data_dir, task, do_test=False):
         if task in ['mr', 'sst-5', 'subj', 'trec', 'cr', 'mpqa']:
             filename = os.path.join(data_dir, f"{split}.csv")
             dataset[split] = pd.read_csv(filename, header=None).values.tolist()
+        if task in ['MED_NLI']:
+            filename = os.path.join(data_dir,f"{split}.txt")
+            with open(filename,"r") as f:
+                lines = f.readlines()
+            dataset[split] = lines 
         else:
             filename = os.path.join(data_dir, f"{split}.tsv")
             with open(filename, "r") as f:
@@ -77,7 +84,7 @@ def main():
     parser.add_argument("--k", type=int, help="Number of training instances per label", default=16)
     parser.add_argument("--data_dir", type=str, default="data/k-shot", help="Path to few-shot data")
     parser.add_argument("--seed", type=int, nargs="+", default=[42, 13, 21, 87, 100], help="Seeds for data splits")
-    parser.add_argument("--task", type=str, nargs="+", default=["SST-2", "sst-5", "mr", "cr", "mpqa", "subj", "trec", "CoLA", "MRPC", "QQP", "STS-B", "MNLI", "SNLI", "QNLI", "RTE"], help="Tasks")
+    parser.add_argument("--task", type=str, nargs="+", default=["SST-2", "sst-5", "mr", "cr", "mpqa", "subj", "trec", "CoLA", "MRPC", "QQP", "STS-B", "MNLI", "SNLI", "QNLI", "RTE", "MED_NLI"], help="Tasks")
 
     args = parser.parse_args()
 

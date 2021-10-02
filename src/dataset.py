@@ -79,6 +79,7 @@ def tokenize_multipart_input(
     token_type_ids = [] # Only for BERT
     mask_pos = None # Position of the mask token
 
+#   进行prompt的替换
     if prompt:
         """
         Concatenate all sentences and prompts based on the provided template.
@@ -266,11 +267,12 @@ class FewShotDataset(torch.utils.data.Dataset):
         self.tokenizer = tokenizer
         self.mode = mode
 
-        # If not using demonstrations, use use_demo=True
+        # If not using demonstrations, use use_demo=False
         self.use_demo = use_demo
         if self.use_demo:
             logger.info("Use demonstrations")
         assert mode in ["train", "dev", "test"]
+        # test是predict
 
         # Get label list and (for prompt) label word list
         self.label_list = self.processor.get_labels()
@@ -290,6 +292,7 @@ class FewShotDataset(torch.utils.data.Dataset):
                 logger.info("Label {} to word {} ({})".format(key, tokenizer._convert_id_to_token(self.label_to_word[key]), self.label_to_word[key]))
             
             if len(self.label_list) > 1:
+                # label_word_list 存的label对应的词的id, label_list 存label的id
                 self.label_word_list = [self.label_to_word[label] for label in self.label_list]
             else:
                 # Regression task
@@ -326,6 +329,8 @@ class FewShotDataset(torch.utils.data.Dataset):
             ),
         )
 
+
+        #加载数据
         logger.info(f"Creating/loading examples from dataset file at {args.data_dir}")
 
         lock_path = cached_features_file + ".lock"
@@ -387,7 +392,7 @@ class FewShotDataset(torch.utils.data.Dataset):
             assert len(self.query_emb) == len(self.query_examples)
  
         # Size is expanded by num_sample
-        self.size = len(self.query_examples) * self.num_sample
+        self.size = len(self.query_examples) * self.num_sample #numsample得用法存疑
         
         # Prepare examples (especially for using demonstrations)
         support_indices = list(range(len(self.support_examples)))
@@ -418,12 +423,13 @@ class FewShotDataset(torch.utils.data.Dataset):
                                 if args.debug_mode:
                                     print("    %.4f %s | %s" % (score, self.support_examples[support_idx].label, self.support_examples[support_idx].text_a)) # debug
                     else:
-                        limit_each_label = int(len(sim_score) // self.num_labels * args.demo_filter_rate)
+                        limit_each_label = int(len(sim_score) // self.num_labels * args.demo_filter_rate) # demo_filter_rate default:0.5
                         count_each_label = {label: 0 for label in self.label_list}
                         context_indices = []
 
                         if args.debug_mode:
                             print("Query %s: %s" % (self.query_examples[query_idx].label, self.query_examples[query_idx].text_a)) # debug
+                        #给每个query对应每个class下limit_each_label数量的support
                         for support_idx, score in sim_score:
                             if count_each_label[self.support_examples[support_idx].label] < limit_each_label:
                                 count_each_label[self.support_examples[support_idx].label] += 1
@@ -486,6 +492,7 @@ class FewShotDataset(torch.utils.data.Dataset):
                 selection.append(context_examples[order[i]])
         else:
             # Our sampling strategy
+            # 从高到低选max_demo_pre_label个加入，并没有什么
             order = np.random.permutation(len(context_examples))
 
             for i in order:
@@ -537,7 +544,7 @@ class FewShotDataset(torch.utils.data.Dataset):
     def get_labels(self):
         return self.label_list
 
-
+    # 数据处理的最后一步，返回features直接输入模型
     def convert_fn(
         self,
         example,
@@ -555,6 +562,7 @@ class FewShotDataset(torch.utils.data.Dataset):
         max_length = self.args.max_seq_length    
 
         # Prepare labels
+        #label_map: label_name to label_id
         label_map = {label: i for i, label in enumerate(label_list)} # Mapping the label names to label ids
         if len(label_list) == 1:
             # Regression
@@ -567,6 +575,7 @@ class FewShotDataset(torch.utils.data.Dataset):
             # Regerssion
             example_label = float(example.label)
         else:
+            #此时label转换为对应label_id,注意不是label_word_id ！！！
             example_label = label_map[example.label]
 
         # Prepare other features

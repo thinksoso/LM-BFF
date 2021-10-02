@@ -96,6 +96,7 @@ class MnliProcessor(DataProcessor):
         """See base class."""
         return ["contradiction", "entailment", "neutral"]
 
+# 每个sample需要满足InputExample
     def _create_examples(self, lines, set_type):
         """Creates examples for the training, dev and test sets."""
         examples = []
@@ -109,6 +110,46 @@ class MnliProcessor(DataProcessor):
             examples.append(InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
         return examples
 
+
+class MednliProcessor(DataProcessor):
+    """Processor for the MedNLI data set (GLUE version)."""
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return InputExample(
+            tensor_dict["idx"].numpy(),
+            tensor_dict["premise"].numpy().decode("utf-8"),
+            tensor_dict["hypothesis"].numpy().decode("utf-8"),
+            str(tensor_dict["label"].numpy()),
+        )
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(self._read_tsv(os.path.join(data_dir, "train.txt")), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(self._read_tsv(os.path.join(data_dir, "dev.txt")), "dev_matched")
+
+    def get_test_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(self._read_tsv(os.path.join(data_dir, "test.txt")), "test_matched")
+
+    def get_labels(self):
+        """See base class."""
+        return ["contradiction", "entailment", "neutral"]
+
+# 每个sample需要满足InputExample
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training, dev and test sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            guid = "%s-%s" % (set_type,str(i))
+            text_a = line[0]
+            text_b = line[1]
+            label = line[2]
+            examples.append(InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+        return examples
 
 class MnliMismatchedProcessor(MnliProcessor):
     """Processor for the MultiNLI Mismatched data set (GLUE version)."""
@@ -553,7 +594,8 @@ processors_mapping = {
     "subj": TextClassificationProcessor("subj"),
     "trec": TextClassificationProcessor("trec"),
     "cr": TextClassificationProcessor("cr"),
-    "mpqa": TextClassificationProcessor("mpqa")
+    "mpqa": TextClassificationProcessor("mpqa"),
+    "med_nli": MednliProcessor()
 }
 
 num_labels_mapping = {
@@ -572,7 +614,8 @@ num_labels_mapping = {
     "subj": 2,
     "trec": 6,
     "cr": 2,
-    "mpqa": 2
+    "mpqa": 2,
+    "med_nli": 3
 }
 
 output_modes_mapping = {
@@ -592,7 +635,8 @@ output_modes_mapping = {
     "subj": "classification",
     "trec": "classification",
     "cr": "classification",
-    "mpqa": "classification"
+    "mpqa": "classification",
+    "med_nli": "classification"
 }
 
 # Return a function that takes (task_name, preds, labels) as inputs
@@ -614,6 +658,7 @@ compute_metrics_mapping = {
     "trec": text_classification_metrics,
     "cr": text_classification_metrics,
     "mpqa": text_classification_metrics,
+    "med_nli": glue_compute_metrics
 }
 
 # For regression task only: median
